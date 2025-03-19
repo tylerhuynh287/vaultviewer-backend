@@ -12,7 +12,18 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Default check
 app.get("/", (req, res) => {
     res.send("VaultViewer API is running.");
+})
+
+// Health check route - Jet Requested
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        message: "The application is up and running"
+    });
 });
 
+// Server starter
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
