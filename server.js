@@ -12,10 +12,32 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// API route to create a storage bin
-app.post("/api/bins/create", async (req, res) => {
+const verifyToken = async (req, res, next) => {
+    const token = req.headers.authorization?.split("Bearer ")[1];
+
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized: No token provided"
+        });
+    }
+
     try {
-        const { userId, name, qrCode } = req.body;
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        req.user = decodedToken;
+        next();
+    } catch (error) {
+        return res.status(403).json({
+            success: false, message: "Unauthorized: Invalid token"
+        });
+    }
+};
+
+// API route to create a storage bin
+app.post("/api/bins", verifyToken, async (req, res) => {
+    try {
+        const { name, qrCode } = req.body;
+        const userId = req.user.uid;
         const firestore = admin.firestore();
         
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
@@ -43,9 +65,9 @@ app.post("/api/bins/create", async (req, res) => {
 });
 
 // API route to get all bins for a user
-app.get("/api/bins/:userId", async (req, res) => {
+app.get("/api/bins", verifyToken, async (req, res) => {
     try {
-        const { userId } = req.params;
+        const userId = req.user.uid;
         const firestore = admin.firestore();
 
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
@@ -78,9 +100,10 @@ app.get("/api/bins/:userId", async (req, res) => {
 });
 
 // API route to get a specific bin by ID
-app.get("/api/bins/:userId/:binId", async (req, res) => {
+app.get("/api/bins/:binId", verifyToken, async (req, res) => {
     try {
-        const { userId, binId } = req.params;
+        const userId = req.user.uid;
+        const { binId } = req.params;
         const firestore = admin.firestore();
 
         const binsRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
@@ -107,9 +130,11 @@ app.get("/api/bins/:userId/:binId", async (req, res) => {
 })
 
 // Api route to add an item to the bin
-app.post("/api/items/add", async (req, res) => {
+app.post("/api/items/:binId", verifyToken, async (req, res) => {
     try {
-        const { userId, binId, name, category, quantity, notes } = req.body;
+        const userId = req.user.uid;
+        const { binId } = req.params;
+        const { name, category, quantity, notes } = req.body;
         const firestore = admin.firestore();
 
         const binsRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
@@ -151,9 +176,10 @@ app.post("/api/items/add", async (req, res) => {
 });
 
 // API route to get all items in bin
-app.get("/api/items/:userId/:binId", async (req, res) => {
+app.get("/api/items/:binId", verifyToken, async (req, res) => {
     try {
-        const { userId, binId } = req.params;
+        const userId = req.user.uid;
+        const { binId } = req.params;
         const firestore = admin.firestore();
 
         const itemsRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items");
@@ -186,9 +212,10 @@ app.get("/api/items/:userId/:binId", async (req, res) => {
 });
 
 // API route to delete an item
-app.delete("/api/items/:userId/:binId/:itemId", async (req, res) => {
+app.delete("/api/items/:binId/:itemId", verifyToken, async (req, res) => {
     try {
-        const { userId, binId, itemId } = req.params;
+        const userId = req.user.uid;
+        const { binId, itemId } = req.params;
         const firestore = admin.firestore();
 
         const itemRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items").doc(itemId);
@@ -217,9 +244,10 @@ app.delete("/api/items/:userId/:binId/:itemId", async (req, res) => {
 });
 
 // API route for editing an item's details
-app.put("/api/items/:userId/:binId/:itemId", async (req, res) => {
+app.put("/api/items/:binId/:itemId", verifyToken, async (req, res) => {
     try {
-        const { userId, binId, itemId } = req.params;
+        const userId = req.user.uid;
+        const { binId, itemId } = req.params;
         const { name, category, quantity, notes } = req.body;
         const firestore = admin.firestore();
 
@@ -257,9 +285,10 @@ app.put("/api/items/:userId/:binId/:itemId", async (req, res) => {
 });
 
 // API route for editing a bin's details
-app.put("/api/bins/:userId/:binId", async (req, res) => {
+app.put("/api/bins/:binId", verifyToken, async (req, res) => {
     try {
-        const { userId, binId } = req.params;
+        const userId = req.user.uid;
+        const { binId } = req.params;
         const { name, qrCode } = req.body;
         const firestore = admin.firestore();
 
@@ -296,9 +325,10 @@ app.put("/api/bins/:userId/:binId", async (req, res) => {
 
 
 // API route for deleting a bin
-app.delete("/api/bins/:userId/:binId", async (req, res) => {
+app.delete("/api/bins/:binId", verifyToken, async (req, res) => {
     try {
-        const { userId, binId } = req.params;
+        const userId = req.user.uid;
+        const { binId } = req.params;
         const firestore = admin.firestore();
 
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
