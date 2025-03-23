@@ -20,11 +20,13 @@ app.use("/api/auth", authRouter);
 // Default check
 app.get("/", (req, res) => {
     res.send("VaultViewer API is running.");
-});
+})
 
-// Health check route - Jet requested
+// Health check route - Jet Requested
 app.get("/health", (req, res) => {
-    res.status(200).json({ message: "The application is up and running." });
+    res.status(200).json({
+        message: "The application is up and running"
+    });
 });
 
 // Start the server
