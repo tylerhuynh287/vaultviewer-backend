@@ -58,7 +58,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         const { name, qrCode } = req.body;
 
         if (!userId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
                 message: GenericErrorMessages.MISSING_USER_ID
             });
@@ -95,12 +95,12 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const { binId } = req.params;
 
         if (!userId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
                 message:  GenericErrorMessages.MISSING_USER_ID
             });
         } else if(!binId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
                 message: BinErrorMessages.MISSING_BIN_ID
             });
@@ -110,7 +110,7 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const binDoc = await binRef.get();
     
         if (!binDoc.exists) {
-            return res.status(404).json({ 
+            return res.status(ErrorCodes.NOT_FOUND).json({ 
                 success: false, 
                 message: BinErrorMessages.MISSING_BIN
             });
@@ -137,12 +137,12 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const { name, qrCode } = req.body;
 
         if (!userId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
                 message:  GenericErrorMessages.MISSING_USER_ID
             });
         } else if(!binId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
                 message: BinErrorMessages.MISSING_BIN_ID
             });
@@ -152,7 +152,7 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const binDoc = await binRef.get();
     
         if (!binDoc.exists) {
-            return res.status(404).json({
+            return res.status(ErrorCodes.NOT_FOUND).json({
                 success: false,
                 message: BinErrorMessages.MISSING_BIN
             });
@@ -187,12 +187,12 @@ router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Res
         
 
         if (!userId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
                 message:  GenericErrorMessages.MISSING_USER_ID
             });
         } else if(!binId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
                 message: BinErrorMessages.MISSING_BIN_ID
             });
@@ -202,7 +202,7 @@ router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Res
         const binDoc = await binRef.get();
     
         if (!binDoc.exists) {
-            return res.status(404).json({
+            return res.status(ErrorCodes.NOT_FOUND).json({
                 success: false,
                 message: BinErrorMessages.MISSING_BIN
             });

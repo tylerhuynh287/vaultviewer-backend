@@ -1,13 +1,22 @@
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import verifyToken from "../middleware/verifyToken";
+import { ErrorCodes, GenericErrorMessages } from "../enums/errors";
+import { ItemErrorMessages, ItemSuccessMessages } from "../Firebase/item/itemsConstants";
 
 interface AuthenticatedRequest extends Request {
     user?: admin.auth.DecodedIdToken;
 }
+interface ItemUpdatePayload {
+    name?: string;
+    category?: string;
+    quantity?: number;
+    notes?: string;
+    updatedAt?: FirebaseFirestore.FieldValue;
+}
 
 const router = express.Router();
-
+const firestore = admin.firestore();
 
 // Get all items in a bin
 router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
@@ -15,23 +24,20 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const userId = req.user?.uid;
         const { binId } = req.params;
 
-        if (!userId || !binId) {
-            return res.status(400).json({
+        if (!userId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
-                message: "Missing userId or binId."
+                message: GenericErrorMessages.MISSING_USER_ID
+            });
+        } else if (!binId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
+                success: false,
+                message: ItemErrorMessages.MISSING_BIN_ID
             });
         }
 
-        const firestore = admin.firestore();
         const itemsRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items");
         const snapshot = await itemsRef.get();
-    
-        if (snapshot.empty) {
-            return res.status(404).json({
-            success: false,
-            message: "No items found in this bin."
-            });
-        }
         
         // Changed to .map for conciseness
         const items = snapshot.docs.map(doc => ({
@@ -41,11 +47,11 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
     
         res.json({
             success: true,
-            items 
+            items: []
         });
     } catch (error: any) {
-        console.error("Error fetching items:", error);
-        res.status(500).json({
+        console.error(ItemErrorMessages.GENERIC_ITEM_ERROR, error);
+        res.status(ErrorCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
             error: error.message
         });
@@ -60,25 +66,28 @@ router.post("/:binId", verifyToken, async (req : AuthenticatedRequest, res: Resp
         const { binId } = req.params;
         const { name, category, quantity, notes } = req.body;
 
-        if (!userId || !binId) {
-            return res.status(400).json({
+        if (!userId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
-                message: "Missing userId or binId."
+                message: GenericErrorMessages.MISSING_USER_ID
+            });
+        } else if (!binId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
+                success: false,
+                message: ItemErrorMessages.MISSING_BIN_ID
             });
         }
 
-        const firestore = admin.firestore();
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
         if (!binDoc.exists) {
-            return res.status(404).json({
+            return res.status(ErrorCodes.NOT_FOUND).json({
                 success: false,
-                message: "Bin not found."
+                message: ItemErrorMessages.MISSING_BIN_ID
             });
         }
     
-        const binName = binDoc.data()?.name || "Unnamed Bin";
         const itemsRef = binRef.collection("items");
         const newItemRef = itemsRef.doc();
     
@@ -93,12 +102,12 @@ router.post("/:binId", verifyToken, async (req : AuthenticatedRequest, res: Resp
     
         res.status(201).json({
             success: true,
-            message: `Item added to bin: ${binName}`,
+            message: ItemSuccessMessages.ITEM_SUCCESS_CREATE,
             itemId: newItemRef.id
         });
     } catch (error: any) {
-        console.error("Error adding item:", error);
-        res.status(500).json({
+        console.error(ItemErrorMessages.CREATE_ITEM_ERROR, error);
+        res.status(ErrorCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
             error: error.message
         });
@@ -113,41 +122,50 @@ router.put("/:binId/:itemId", verifyToken, async (req: AuthenticatedRequest, res
         const { binId, itemId } = req.params;
         const { name, category, quantity, notes } = req.body;
 
-        if (!userId || !binId || !itemId) {
-            return res.status(400).json({
+        if (!userId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
-                message: "Missing userId, binId, or itemId."
+                message: GenericErrorMessages.MISSING_USER_ID
+            });
+        } else if (!binId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
+                success: false,
+                message: ItemErrorMessages.MISSING_BIN_ID
+            });
+        } else if (!itemId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
+                success: false,
+                message: ItemErrorMessages.MISSING_ITEM_ID
             });
         }
 
-        const firestore = admin.firestore();
         const itemRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items").doc(itemId);
         const itemDoc = await itemRef.get();
     
         if (!itemDoc.exists) {
-            return res.status(404).json({
+            return res.status(ErrorCodes.NOT_FOUND).json({
                 success: false,
-                message: "Item not found."
+                message: ItemErrorMessages.MISSING_ITEM
             });
         }
     
-        const updatedFields: Record<string, any> = {};
+        const updatedFields: ItemUpdatePayload = {};
         if (name) updatedFields.name = name;
         if (category) updatedFields.category = category;
         if (quantity) updatedFields.quantity = quantity;
         if (notes) updatedFields.notes = notes;
         updatedFields.updatedAt = admin.firestore.FieldValue.serverTimestamp();
     
-        await itemRef.update(updatedFields);
+        await itemRef.update(updatedFields as FirebaseFirestore.UpdateData<ItemUpdatePayload>);
     
         res.json({
             success: true,
-            message: "Item updated successfully.",
+            message: ItemSuccessMessages.ITEM_SUCCESS_UPDATE,
             updatedFields
         });
     } catch (error: any) {
-        console.error("Error updating item:", error);
-        res.status(500).json({
+        console.error(ItemErrorMessages.UPDATE_ITEM_ERROR, error);
+        res.status(ErrorCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
             error: error.message
         });
@@ -161,21 +179,30 @@ router.delete("/:binId/:itemId", verifyToken, async (req: AuthenticatedRequest, 
         const userId = req.user?.uid;
         const { binId, itemId } = req.params;
 
-        if (!userId || !binId || !itemId) {
-            return res.status(400).json({
+        if (!userId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
-                message: "Missing userId, binId, or itemId."
+                message: GenericErrorMessages.MISSING_USER_ID
+            });
+        } else if (!binId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
+                success: false,
+                message: ItemErrorMessages.MISSING_BIN_ID
+            });
+        } else if (!itemId) {
+            return res.status(ErrorCodes.BAD_REQUEST).json({
+                success: false,
+                message: ItemErrorMessages.MISSING_ITEM_ID
             });
         }
 
-        const firestore = admin.firestore();
         const itemRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items").doc(itemId);
         const itemDoc = await itemRef.get();
     
         if (!itemDoc.exists) {
-            return res.status(404).json({
+            return res.status(ErrorCodes.NOT_FOUND).json({
                 success: false,
-                message: "Item not found."
+                message: ItemErrorMessages.MISSING_ITEM
             });
         }
     
@@ -183,11 +210,11 @@ router.delete("/:binId/:itemId", verifyToken, async (req: AuthenticatedRequest, 
     
         res.json({
             success: true,
-            message: "Item deleted successfully."
+            message: ItemSuccessMessages.ITEM_SUCCESS_DELETE
         });
     } catch (error: any) {
-        console.error("Error deleting item:", error);
-        res.status(500).json({
+        console.error(ItemErrorMessages.DELETE_ITEM_ERROR, error);
+        res.status(ErrorCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
             error: error.message
         });
