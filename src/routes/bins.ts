@@ -1,6 +1,8 @@
 import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import verifyToken from "../middleware/verifyToken";
+import { ErrorCodes, GenericErrorMessages } from "../enums/errors";
+import { BinCollections, BinErrorMessages, BinSuccessMessages } from "../Firebase/bin/binConstants";
 
 
 interface AuthenticatedRequest extends Request {
@@ -16,20 +18,21 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
         const userId = req.user?.uid;
 
         if (!userId) {
-            return res.status(400).json({
+            return res.status(ErrorCodes.BAD_REQUEST).json({
                 success: false,
-                message: "Missing userId."
+                message: GenericErrorMessages.MISSING_USER_ID
             });
         }
 
         const firestore = admin.firestore();
-        const binsRef = firestore.collection("users").doc(userId).collection("bins");
+        const binsRef = firestore.collection(BinCollections.USERS).doc(userId).collection("bins");
         const snapshot = await binsRef.get();
     
+        // TODO: Empty Bin is not an error just an empty query. Need to send back empty Array
         if (snapshot.empty) {
             return res.status(404).json({ 
                 success: false, 
-                message: "No bins found." 
+                message: BinErrorMessages.MISSING_BINS 
             });
         }
         
@@ -44,14 +47,13 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
             bins 
         });
     } catch (error: any) {
-        console.error("Error fetching bins:", error);
+        console.error(BinErrorMessages.GENERIC_BIN_ERROR, error);
         res.status(500).json({ 
             success: false, 
             error: error.message 
         });
     }
 });
-
 
 // Create a new bin
 router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
@@ -62,12 +64,12 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "Missing userId."
+                message: GenericErrorMessages.MISSING_USER_ID
             });
         }
 
         const firestore = admin.firestore();
-        const binsRef = firestore.collection("users").doc(userId).collection("bins");
+        const binsRef = firestore.collection(BinCollections.USERS).doc(userId).collection("bins");
         const newBinRef = binsRef.doc();
 
         await newBinRef.set({
@@ -98,10 +100,15 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const userId = req.user?.uid;
         const { binId } = req.params;
 
-        if (!userId || !binId) {
+        if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "Missing userId or binId."
+                message:  GenericErrorMessages.MISSING_USER_ID
+            });
+        } else if(!!binId) {
+            return res.status(400).json({
+                success: false,
+                message: BinErrorMessages.MISSING_BINS
             });
         }
 
@@ -109,10 +116,11 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
+        // TODO: No Bin found shouldn't be an error - send back empty array
         if (!binDoc.exists) {
             return res.status(404).json({ 
                 success: false, 
-                message: "Bin not found." 
+                message: BinErrorMessages.MISSING_BINS
             });
         }
   
@@ -121,7 +129,7 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
             bin: binDoc.data()
         });
     } catch (error: any) {
-        console.error("Error fetching bin:", error);
+        console.error(BinErrorMessages.GENERIC_BIN_ERROR, error);
         res.status(500).json({ 
             success: false, 
             error: error.message 
@@ -137,10 +145,15 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const { binId } = req.params;
         const { name, qrCode } = req.body;
 
-        if (!userId || !binId) {
+        if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "Missing userId or binId."
+                message:  GenericErrorMessages.MISSING_USER_ID
+            });
+        } else if(!!binId) {
+            return res.status(400).json({
+                success: false,
+                message: BinErrorMessages.MISSING_BINS
             });
         }
 
@@ -148,10 +161,11 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
+        // TODO: No Bin found shouldn't be an error - send back empty array
         if (!binDoc.exists) {
-            return res.status(404).json({ 
+            return res.status(404).json({
                 success: false,
-                message: "Bin not found."
+                message: BinErrorMessages.MISSING_BINS
             });
         }
     
@@ -164,11 +178,11 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
     
         res.json({
             success: true,
-            message: "Bin updated successfully.",
+            message: BinSuccessMessages.BIN_SUCCESS_UPDATE,
             updatedFields,
         });
     } catch (error: any) {
-        console.error("Error updating bin:", error);
+        console.error(BinErrorMessages, error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -176,17 +190,22 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
     }
 });
 
-
 // Delete a bin and all items in it
 router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.uid;
+    const { binId } = req.params;
     try {
-        const userId = req.user?.uid;
-        const { binId } = req.params;
+        
 
-        if (!userId || !binId) {
+        if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "Missing userId or binId."
+                message:  GenericErrorMessages.MISSING_USER_ID
+            });
+        } else if(!!binId) {
+            return res.status(400).json({
+                success: false,
+                message: BinErrorMessages.MISSING_BINS
             });
         }
 
@@ -194,10 +213,11 @@ router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Res
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
+        //TODO: Empty Bin is okay send back array
         if (!binDoc.exists) {
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
-                message: "Bin not found."
+                message: BinErrorMessages.MISSING_BINS
             });
         }
     
@@ -211,10 +231,10 @@ router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Res
     
         res.json({
             success: true,
-            message: "Bin and all items deleted."
+            message: BinSuccessMessages.BIN_SUCCESS_DELETE
         });
     } catch (error: any) {
-        console.error("Error deleting bin:", error);
+        console.error(BinErrorMessages.UPDATE_BIN_ERROR + " " +  binId, error);
         res.status(500).json({
             success: false,
             error: error.message
