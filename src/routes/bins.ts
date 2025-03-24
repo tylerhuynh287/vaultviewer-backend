@@ -98,7 +98,7 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const userId = req.user?.uid;
         const { binId } = req.params;
 
-        if (!userId || binId) {
+        if (!userId || !binId) {
             return res.status(400).json({
                 success: false,
                 message: "Missing userId or binId."
@@ -137,7 +137,7 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
         const { binId } = req.params;
         const { name, qrCode } = req.body;
 
-        if (!userId || binId) {
+        if (!userId || !binId) {
             return res.status(400).json({
                 success: false,
                 message: "Missing userId or binId."
@@ -183,7 +183,7 @@ router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Res
         const userId = req.user?.uid;
         const { binId } = req.params;
 
-        if (!userId || binId) {
+        if (!userId || !binId) {
             return res.status(400).json({
                 success: false,
                 message: "Missing userId or binId."
