@@ -1,15 +1,28 @@
-const express = require("express");
+import express, { Request, Response } from "express";
+import admin from "firebase-admin";
+import verifyToken from "../middleware/verifyToken";
+
+
+interface AuthenticatedRequest extends Request {
+    user?: admin.auth.DecodedIdToken;
+}
+
 const router = express.Router();
-const admin = require("firebase-admin");
-const verifyToken = require("../middleware/verifyToken");
 
 
 // Get all bins
-router.get("/", verifyToken, async (req, res) => {
+router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const snapshot = await binsRef.get();
     
@@ -23,14 +36,14 @@ router.get("/", verifyToken, async (req, res) => {
         // Changed to .map for conciseness
         const bins = snapshot.docs.map(doc => ({
             binId: doc.id,
-            ...doc.data(),
+            ...doc.data()
         }));
     
         res.json({ 
             success: true, 
             bins 
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching bins:", error);
         res.status(500).json({ 
             success: false, 
@@ -41,12 +54,19 @@ router.get("/", verifyToken, async (req, res) => {
 
 
 // Create a new bin
-router.post("/", verifyToken, async (req, res) => {
+router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { name, qrCode } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId."
+            });
+        }
+
         const firestore = admin.firestore();
-  
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const newBinRef = binsRef.doc();
 
@@ -54,15 +74,15 @@ router.post("/", verifyToken, async (req, res) => {
             binId: newBinRef.id,
             name,
             qrCode,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
     
         res.status(201).json({
             success: true,
             message: "Storage bin created!",
-            binId: newBinRef.id,
+            binId: newBinRef.id
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error creating bin:", error);
         res.status(500).json({
             success: false, 
@@ -73,12 +93,19 @@ router.post("/", verifyToken, async (req, res) => {
 
 
 // Get a specific bin
-router.get("/:binId", verifyToken, async (req, res) => {
+router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { binId } = req.params;
+
+        if (!userId || binId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId or binId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
@@ -93,7 +120,7 @@ router.get("/:binId", verifyToken, async (req, res) => {
             success: true,
             bin: binDoc.data()
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching bin:", error);
         res.status(500).json({ 
             success: false, 
@@ -104,13 +131,20 @@ router.get("/:binId", verifyToken, async (req, res) => {
 
 
 // Update a bin
-router.put("/:binId", verifyToken, async (req, res) => {
+router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { binId } = req.params;
         const { name, qrCode } = req.body;
+
+        if (!userId || binId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId or binId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
@@ -121,7 +155,7 @@ router.put("/:binId", verifyToken, async (req, res) => {
             });
         }
     
-        const updatedFields = {};
+        const updatedFields: Record<string, any> = {};
         if (name) updatedFields.name = name;
         if (qrCode) updatedFields.qrCode = qrCode;
         updatedFields.updatedAt = admin.firestore.FieldValue.serverTimestamp();
@@ -133,7 +167,7 @@ router.put("/:binId", verifyToken, async (req, res) => {
             message: "Bin updated successfully.",
             updatedFields,
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error updating bin:", error);
         res.status(500).json({
             success: false,
@@ -144,12 +178,19 @@ router.put("/:binId", verifyToken, async (req, res) => {
 
 
 // Delete a bin and all items in it
-router.delete("/:binId", verifyToken, async (req, res) => {
+router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { binId } = req.params;
+
+        if (!userId || binId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId or binId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
@@ -168,8 +209,11 @@ router.delete("/:binId", verifyToken, async (req, res) => {
     
         await binRef.delete();
     
-        res.json({ success: true, message: "Bin and all items deleted." });
-    } catch (error) {
+        res.json({
+            success: true,
+            message: "Bin and all items deleted."
+        });
+    } catch (error: any) {
         console.error("Error deleting bin:", error);
         res.status(500).json({
             success: false,
@@ -178,4 +222,4 @@ router.delete("/:binId", verifyToken, async (req, res) => {
     }
 });
   
-module.exports = router;
+export default router;

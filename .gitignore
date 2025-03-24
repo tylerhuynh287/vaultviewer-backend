@@ -1,6 +1,9 @@
 node_modules/
-package-lock.json
+
+dist/
 
 .env
 
-../vaultviewer-ffc3d-firebase-adminsdk-fbsvc-919dd43cce.json
+../vaultviewer-ffc3d-firebase-adminsdk-*.json
+
+*.log

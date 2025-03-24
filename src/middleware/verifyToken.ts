@@ -1,6 +1,11 @@
-const admin = require("firebase-admin");
+import { Request, Response, NextFunction } from "express";
+import admin from "firebase-admin";
 
-const verifyToken = async (req, res, next) => {
+interface AuthenticatedRequest extends Request {
+    user?: admin.auth.DecodedIdToken;
+}
+
+const verifyToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split("Bearer ")[1];
 
     if (!token) {
@@ -22,4 +27,4 @@ const verifyToken = async (req, res, next) => {
     }
 };
 
-module.exports = verifyToken;
+export default verifyToken;

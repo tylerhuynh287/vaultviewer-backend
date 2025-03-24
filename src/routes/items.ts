@@ -1,16 +1,28 @@
-const express = require("express");
+import express, { Request, Response } from "express";
+import admin from "firebase-admin";
+import verifyToken from "../middleware/verifyToken";
+
+interface AuthenticatedRequest extends Request {
+    user?: admin.auth.DecodedIdToken;
+}
+
 const router = express.Router();
-const admin = require("firebase-admin");
-const verifyToken = require("../middleware/verifyToken");
 
 
 // Get all items in a bin
-router.get("/:binId", verifyToken, async (req, res) => {
+router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { binId } = req.params;
+
+        if (!userId || !binId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId or binId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const itemsRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items");
         const snapshot = await itemsRef.get();
     
@@ -31,7 +43,7 @@ router.get("/:binId", verifyToken, async (req, res) => {
             success: true,
             items 
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching items:", error);
         res.status(500).json({
             success: false,
@@ -42,13 +54,20 @@ router.get("/:binId", verifyToken, async (req, res) => {
 
 
 // Add an item to a bin
-router.post("/:binId", verifyToken, async (req, res) => {
+router.post("/:binId", verifyToken, async (req : AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { binId } = req.params;
         const { name, category, quantity, notes } = req.body;
+
+        if (!userId || !binId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId or binId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
@@ -59,7 +78,7 @@ router.post("/:binId", verifyToken, async (req, res) => {
             });
         }
     
-        const binName = binDoc.data().name;
+        const binName = binDoc.data()?.name || "Unnamed Bin";
         const itemsRef = binRef.collection("items");
         const newItemRef = itemsRef.doc();
     
@@ -77,7 +96,7 @@ router.post("/:binId", verifyToken, async (req, res) => {
             message: `Item added to bin: ${binName}`,
             itemId: newItemRef.id
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error adding item:", error);
         res.status(500).json({
             success: false,
@@ -88,13 +107,20 @@ router.post("/:binId", verifyToken, async (req, res) => {
 
 
 // Edit an item's details
-router.put("/:binId/:itemId", verifyToken, async (req, res) => {
+router.put("/:binId/:itemId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { binId, itemId } = req.params;
         const { name, category, quantity, notes } = req.body;
+
+        if (!userId || !binId || !itemId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId, binId, or itemId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const itemRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items").doc(itemId);
         const itemDoc = await itemRef.get();
     
@@ -105,7 +131,7 @@ router.put("/:binId/:itemId", verifyToken, async (req, res) => {
             });
         }
     
-        const updatedFields = {};
+        const updatedFields: Record<string, any> = {};
         if (name) updatedFields.name = name;
         if (category) updatedFields.category = category;
         if (quantity) updatedFields.quantity = quantity;
@@ -119,7 +145,7 @@ router.put("/:binId/:itemId", verifyToken, async (req, res) => {
             message: "Item updated successfully.",
             updatedFields
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error updating item:", error);
         res.status(500).json({
             success: false,
@@ -130,12 +156,19 @@ router.put("/:binId/:itemId", verifyToken, async (req, res) => {
 
 
 // Delete an item
-router.delete("/:binId/:itemId", verifyToken, async (req, res) => {
+router.delete("/:binId/:itemId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = req.user.uid;
+        const userId = req.user?.uid;
         const { binId, itemId } = req.params;
+
+        if (!userId || !binId || !itemId) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing userId, binId, or itemId."
+            });
+        }
+
         const firestore = admin.firestore();
-    
         const itemRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items").doc(itemId);
         const itemDoc = await itemRef.get();
     
@@ -152,7 +185,7 @@ router.delete("/:binId/:itemId", verifyToken, async (req, res) => {
             success: true,
             message: "Item deleted successfully."
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting item:", error);
         res.status(500).json({
             success: false,
@@ -161,4 +194,4 @@ router.delete("/:binId/:itemId", verifyToken, async (req, res) => {
     }
 });
   
-module.exports = router;
+export default router;
