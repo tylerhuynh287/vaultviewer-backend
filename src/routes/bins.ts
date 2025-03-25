@@ -15,7 +15,6 @@ interface BinUpdatePayload {
 }
 
 const router = express.Router();
-const firestore = admin.firestore();
 
 // Get all bins
 router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
@@ -28,7 +27,8 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
                 message: GenericErrorMessages.MISSING_USER_ID
             });
         }
-
+        
+        const firestore = admin.firestore();
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const snapshot = await binsRef.get();
         
@@ -64,6 +64,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
             });
         }
 
+        const firestore = admin.firestore();
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const newBinRef = binsRef.doc();
 
@@ -106,6 +107,7 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
             });
         }
 
+        const firestore = admin.firestore();
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
@@ -148,6 +150,7 @@ router.put("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
             });
         }
 
+        const firestore = admin.firestore();
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
@@ -198,6 +201,7 @@ router.delete("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Res
             });
         }
 
+        const firestore = admin.firestore();
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     

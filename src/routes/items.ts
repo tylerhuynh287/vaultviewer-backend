@@ -16,7 +16,6 @@ interface ItemUpdatePayload {
 }
 
 const router = express.Router();
-const firestore = admin.firestore();
 
 // Get all items in a bin
 router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Response) => {
@@ -36,6 +35,7 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
             });
         }
 
+        const firestore = admin.firestore();
         const itemsRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items");
         const snapshot = await itemsRef.get();
         
@@ -78,6 +78,7 @@ router.post("/:binId", verifyToken, async (req : AuthenticatedRequest, res: Resp
             });
         }
 
+        const firestore = admin.firestore();
         const binRef = firestore.collection("users").doc(userId).collection("bins").doc(binId);
         const binDoc = await binRef.get();
     
@@ -139,6 +140,7 @@ router.put("/:binId/:itemId", verifyToken, async (req: AuthenticatedRequest, res
             });
         }
 
+        const firestore = admin.firestore();
         const itemRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items").doc(itemId);
         const itemDoc = await itemRef.get();
     
@@ -196,6 +198,7 @@ router.delete("/:binId/:itemId", verifyToken, async (req: AuthenticatedRequest, 
             });
         }
 
+        const firestore = admin.firestore();
         const itemRef = firestore.collection("users").doc(userId).collection("bins").doc(binId).collection("items").doc(itemId);
         const itemDoc = await itemRef.get();
     
