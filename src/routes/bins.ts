@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import admin from "firebase-admin";
 import verifyToken from "../middleware/verifyToken";
 import { ErrorCodes, GenericErrorMessages } from "../enums/errors";
-import { BinCollections, BinErrorMessages, BinSuccessMessages } from "../Firebase/bin/binConstants";
+import { BinErrorMessages, BinSuccessMessages } from "../Firebase/bin/binConstants";
 
 
 interface AuthenticatedRequest extends Request {
@@ -29,7 +29,7 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
             });
         }
 
-        const binsRef = firestore.collection(BinCollections.USERS).doc(userId).collection("bins");
+        const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const snapshot = await binsRef.get();
         
         // Changed to .map for conciseness
@@ -64,7 +64,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
             });
         }
 
-        const binsRef = firestore.collection(BinCollections.USERS).doc(userId).collection("bins");
+        const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const newBinRef = binsRef.doc();
 
         await newBinRef.set({
