@@ -68,6 +68,7 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const newBinRef = binsRef.doc();
 
+
         const newBinData: any = {
             binId: newBinRef.id,
             name,
