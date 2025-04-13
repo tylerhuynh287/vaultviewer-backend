@@ -40,7 +40,7 @@ router.get("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =>
     
         res.json({ 
             success: true, 
-            bins: [] 
+            bins
         });
     } catch (error: any) {
         console.error(BinErrorMessages.GENERIC_BIN_ERROR, error);
