@@ -68,12 +68,17 @@ router.post("/", verifyToken, async (req: AuthenticatedRequest, res: Response) =
         const binsRef = firestore.collection("users").doc(userId).collection("bins");
         const newBinRef = binsRef.doc();
 
-        await newBinRef.set({
+        const newBinData: any = {
             binId: newBinRef.id,
             name,
-            qrCode,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        };
+
+        if (qrCode !== undefined) {
+            newBinData.qrCode = qrCode;
+        }
+
+        await newBinRef.set(newBinData);
     
         res.status(201).json({
             success: true,
