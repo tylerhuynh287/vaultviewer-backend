@@ -47,7 +47,7 @@ router.get("/:binId", verifyToken, async (req: AuthenticatedRequest, res: Respon
     
         res.json({
             success: true,
-            items: []
+            items,
         });
     } catch (error: any) {
         console.error(ItemErrorMessages.GENERIC_ITEM_ERROR, error);
